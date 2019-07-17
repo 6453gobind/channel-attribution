@@ -1,0 +1,201 @@
+  ---
+title: "Does Price of House vary based on the City"
+author: "Gobind Agarwal"
+date: "20 December"
+output:
+  html_document:
+    number_sections: yes
+  
+---
+Null Hypothesis:-Price of House varies with City
+Alternative Hypothesis :- Price of House does not varies with City
+
+```{r}
+setwd("/home/msc1/R/Assignment 2")
+getwd()
+```
+
+# Load data and see the structure of data
+Head will show first 6 rows of the data set
+
+```{r}
+HousePrice<-read.csv("HousePrices_HalfMil.csv",header=TRUE)
+head(HousePrice)
+str(HousePrice)
+```
+
+# Check  Missing values
+```{r}
+colSums(is.na(HousePrice))
+```
+There is no missing Value in the dataset
+
+#Correaltional Plot of the Dataset
+```{r}
+ncol(HousePrice)
+cor(HousePrice[1:16])
+library(corrplot)
+corrplot(cor(HousePrice[1:16]), order="hclust",tl.col="black",tl.cex=.75)
+```
+
+
+It is clearly seen from the correlational plot that Price and city is having some positive correaltion
+
+#Descriptive Statistics 
+##Box Plot
+```{r}
+attach(HousePrice)
+boxplot(Prices~City , col=c("Green","Orange","Red"))
+```
+Means are not same with respect to city
+
+#CLT
+Through Central limit theorem we can say, because the number of data points is more than 30 (5,00,000) , the datasets follows a Normal Distribution
+
+#Test For Normality
+##These Test are done to check that dataset is Normal or not
+
+Null Hypothesis : Distribution is Normal
+
+Alternative Hypothesis : Distribution is not Normal
+
+###Shapiro Test
+Sample of 5000 from whole dataset is taken for the test
+
+Area,Prices,City
+```{r}
+#shapiro.test(HousePrice$Area)
+Area_check<-sample(HousePrice$Area,5000)
+shapiro.test(Area_check)
+Prices_check<-sample(HousePrice$Prices,5000)
+shapiro.test(Prices_check)
+City_check<-sample(HousePrice$City,5000)
+shapiro.test(City_check)
+
+```
+P-Values  Are Close to 0 , therefore Reject Null Hypothesis
+
+###QQ PLOT
+```{r}
+qqnorm(Area_check)
+qqnorm(Prices_check)
+qqnorm(City_check)
+
+```
+Plot shows that distribution is not normal
+
+###Normality Tester through Library BSDA
+Center plot is the given data. 
+Randomly generated normally distributed data is plotted on all sides of it. 
+Red Means it is not Normally Distributed.
+```{r}
+library(BSDA)
+ntester(Area_check)
+ntester(Prices_check)
+ntester(City_check)
+```
+
+
+After doing all the Test, it can be concluded that the given Dataset is NOT NORMAL
+
+
+# Homegeneous Variance Test
+To Test that the variance across the group is same or not
+
+Homoscadasticity Or Heteroscadasticity is seen
+
+##Bartlett Test
+
+Null Hypothesis : Variance across the group is same.
+
+```{r}
+bartlett.test(HousePrice[,1],HousePrice[,9])
+```
+Area And City - Same Variance
+```{r}
+bartlett.test(HousePrice[,8],HousePrice[,3])
+```
+FirePlace and Floor - Same Variance
+```{r}
+bartlett.test(HousePrice[,6],HousePrice[,12])
+```
+Black Marble and Fiber - Same Variance
+```{r}
+bartlett.test(HousePrice[,16]~HousePrice[,9])
+```
+p-value is greater than 0.05(alpha level)
+
+ACCEPT NULL HYPOTHESIS : Prices varies with City
+
+#Anova Test
+This is done to analyse the variance of the dataset.
+
+City is taken as factor.
+
+```{r}
+attach(HousePrice)
+city_factor<-as.factor(City)
+aov_1 <- aov(Prices~city_factor)
+summary(aov_1)
+```
+Summary Shows P-Values is close to 0 (<0.05) therefore there is a variation between city and prices
+
+# Differences between the Mean level of City
+95% confidence level
+It shows the difference between two cities
+```{r}
+HSDTEST<-TukeyHSD(aov_1)
+HSDTEST
+plot(HSDTEST)
+model.tables(aov_1,"effects")
+model.tables(aov_1,"means")
+```
+We observe that there is a lot of difference between first city and third city.
+
+
+#Linear Regression
+Area= B0 + Garage(B1) + FirePlace(B2) + Baths(B3) + White.Marble(B4) + Black.Marble(B5) + Floors(B6) + Solar(B7) + Electric(B8) + Fiber(B9) + Glass.Doors(B10) + Swiming.Pool(B12) + Garden(B13)
+
+```{r}
+attach(HousePrice)
+model_area <- lm(Area~Garage+FirePlace+Baths+White.Marble+Black.Marble+Floors+Solar+Electric+Fiber+Glass.Doors+Swiming.Pool+Garden,data=HousePrice)
+summary(model_area)
+```
+Observation :- P-Values (other than B0) is more than 0.05. 
+So These factor are affecting the area of a House
+
+Checking whether How area is affecting city. 
+
+City= B0 + Area(B1)
+```{r}
+model_city <- lm(City~Area,data=HousePrice)
+summary(model_city)
+```
+
+
+
+Checking whether How Price is affected by Area or by City
+
+```{r}
+model_Price_1 <- lm(Prices~Area,data=HousePrice)
+
+summary(model_Price_1)
+```
+
+```{r}
+model_Price_2 <- lm(Prices~City,data=HousePrice)
+summary(model_Price_2)
+```
+
+
+
+
+#CONCLUSION :- 
+
+-Dataset is not normally distributed.
+
+-Variance between price and city is not same.
+
+-TukeyHSD shows the difference beteen cities prices are significant.
+
+-Prices varies with respect to City
